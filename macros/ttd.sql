@@ -6,6 +6,7 @@ WITH parsed_data AS (
         JSON_VALUE(JSON_EXTRACT(data, "$.Advertiser ID")) AS advertiser_id,
         JSON_VALUE(JSON_EXTRACT(data, "$.Campaign ID")) AS campaign_id,
         JSON_VALUE(JSON_EXTRACT(data, "$.Ad Group ID")) AS ad_group_id,
+      
         JSON_VALUE(JSON_EXTRACT(data, "$.Ad Format")) AS ad_format,
         _sdc_extracted_at,
         JSON_VALUE(JSON_EXTRACT(data, "$.Creative ID")) AS creative_id,
@@ -120,11 +121,7 @@ CASE
     or lower(creative) like '%vidod%' then 'Video OnDemand'
 else 'Other'
 END AS media_format,
-CASE
-    WHEN ARRAY_LENGTH(SPLIT(creative,'_')) <8 THEN 'Other'
-    ELSE
-        SPLIT(creative,'_')[OFFSET(7)] 
-END AS audience_name,
+SPLIT(ad_group, '_')[OFFSET(ARRAY_LENGTH(SPLIT(ad_group, '_'))-1)] AS audience_name,
 SPLIT(creative, '_')[OFFSET(ARRAY_LENGTH(SPLIT(creative, '_'))-1)] AS creative_descr,
 CASE 
     WHEN ARRAY_LENGTH(SPLIT(creative,'_')) <8 THEN 'Other'
