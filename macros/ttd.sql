@@ -121,18 +121,20 @@ CASE
     or lower(creative) like '%vidod%' then 'Video OnDemand'
 else 'Other'
 END AS media_format,
-SPLIT(ad_group, '_')[OFFSET(ARRAY_LENGTH(SPLIT(ad_group, '_'))-1)] AS audience_name,
-SPLIT(creative, '_')[OFFSET(ARRAY_LENGTH(SPLIT(creative, '_'))-1)] AS creative_descr,
-CASE 
-    WHEN ARRAY_LENGTH(SPLIT(creative,'_')) <8 THEN 'Other'
-    ELSE
-        SPLIT(creative,'_')[OFFSET(7)] 
-END AS ad_format_detail,
-CASE
-    WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
-    ELSE
-        SPLIT(campaign_name,'_')[OFFSET(1)] 
-END AS campaign_descr
+    CASE WHEN ARRAY_LENGTH(SPLIT(ad_group, '_')) < 8 AND ARRAY_LENGTH(SPLIT(ad_group, '_')) > 1  
+         THEN SPLIT(ad_group, '_')[SAFE_OFFSET(ARRAY_LENGTH(SPLIT(ad_group, '_'))-1)] 
+         WHEN ARRAY_LENGTH(SPLIT(ad_group, '_')) >= 8 THEN SPLIT(ad_group, '_')[SAFE_OFFSET(7)] 
+         ELSE 'Other' END AS audience_name,
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) < 8 AND ARRAY_LENGTH(SPLIT(creative, '_')) > 1  
+         THEN SPLIT(creative, '_')[SAFE_OFFSET(ARRAY_LENGTH(SPLIT(creative, '_'))-1)] 
+         WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN SPLIT(creative, '_')[SAFE_OFFSET(7)] 
+         ELSE 'Other' END AS creative_descr,
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN SPLIT(creative, '_')[SAFE_OFFSET(5)] 
+         WHEN ARRAY_LENGTH(SPLIT(creative, '_')) < 8 AND ARRAY_LENGTH(SPLIT(creative, '_')) > 1  
+         THEN SPLIT(creative, '_')[SAFE_OFFSET(ARRAY_LENGTH(SPLIT(creative, '_'))-3)] 
+         ELSE 'Other' END AS ad_format_detail,
+    CASE WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
+        ELSE SPLIT(campaign_name,'_')[SAFE_OFFSET(1)] END AS campaign_descr,
 
 from ranked_data where row_num = 1
 )
