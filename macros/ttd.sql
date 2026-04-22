@@ -104,7 +104,27 @@ ranked_data AS (
         ) AS row_num
     FROM
         parsed_data
-),final AS (
+),
+deduplicate_data AS (
+    SELECT * FROM ranked_data WHERE row_num = 1
+),
+cm360_campaign_creative AS (
+    SELECT DISTINCT placement AS cm360_campaign_name,creative_name AS cm360_creative_name FROM {{ source(cm360_source_name, cm360_table_name) }} 
+),
+creative_name_joining AS (
+    SELECT source.*,cm360_creative_name
+    FROM deduplicate_data AS source LEFT JOIN cm360_campaign_creative AS reference ON
+    source.campaign_name = reference.cm360_campaign_name
+),
+update_creative_name AS (
+    SELECT * EXCEPT(creative),
+    CASE WHEN cm360_creative_name IS NOT NULL
+    THEN cm360_creative_name ELSE creative END AS creative
+    FROM creative_name_joining
+),
+
+
+final AS (
 select * ,
 CASE 
     WHEN LOWER(campaign_name) LIKE '%acast%' OR LOWER(creative) LIKE '%acast%' THEN 'Acast'
@@ -136,7 +156,7 @@ END AS media_format,
     CASE WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
         ELSE SPLIT(campaign_name,'_')[SAFE_OFFSET(1)] END AS campaign_descr,
 
-from ranked_data where row_num = 1
+from update_creative_name
 )
   SELECT 
         ad_server_creative_placement_id,
