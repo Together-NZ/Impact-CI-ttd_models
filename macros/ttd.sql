@@ -1,4 +1,4 @@
-{% macro ttd(source_name, table_name) %}
+{% macro ttd(source_name, table_name,cm360_source_name,cm360_table_name) %}
 WITH parsed_data AS (
     SELECT
         FORMAT_DATE('%Y-%m-%d', PARSE_DATE('%d/%m/%Y', JSON_VALUE(JSON_EXTRACT(data, "$.Date")))) AS date,
