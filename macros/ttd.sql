@@ -141,11 +141,10 @@ CASE
     or lower(creative) like '%vidod%' then 'Video OnDemand'
 else 'Other'
 END AS media_format,
-    CASE WHEN ARRAY_LENGTH(SPLIT(ad_group, '_')) >= 8 THEN SPLIT(ad_group, '_')[SAFE_OFFSET(7)] 
-         ELSE 'Other' END AS audience_name,
+    ARRAY_REVERSE(SPLIT(ad_group, '_'))[SAFE_OFFSET(0)] AS audience_name,
     CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN SPLIT(creative, '_')[SAFE_OFFSET(7)] 
          ELSE 'Other' END AS creative_descr,
-    CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN SPLIT(creative, '_')[SAFE_OFFSET(5)] 
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN  SPLIT(creative, '_')[SAFE_OFFSET(5)] 
          ELSE 'Other' END AS ad_format_detail,
     CASE WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
         ELSE SPLIT(campaign_name,'_')[SAFE_OFFSET(1)] END AS campaign_descr,
