@@ -108,49 +108,44 @@ ranked_data AS (
 deduplicate_data AS (
     SELECT * FROM ranked_data WHERE row_num = 1
 ),
+ad_group_campaign AS (
+  SELECT ad_group, campaign_name,ROW_NUMBER() OVER (
+    PARTITION BY ad_group_id ORDER BY date DESC ) AS row_num
+  FROM deduplicate_data
+),
+deduplicate_ad_group_campaign AS (
+  SELECT ad_group,campaign_name FROM ad_group_campaign WHERE row_num=1
+),
 cm360_campaign_creative AS (
-    SELECT DISTINCT placement AS cm360_campaign_name,creative_name AS cm360_creative_name FROM {{ source(cm360_source_name, cm360_table_name) }} 
-),
-creative_name_joining AS (
-    SELECT source.*,cm360_creative_name
-    FROM deduplicate_data AS source LEFT JOIN cm360_campaign_creative AS reference ON
-    source.campaign_name = reference.cm360_campaign_name
-),
-update_creative_name AS (
-    SELECT * EXCEPT(creative),
-    CASE WHEN cm360_creative_name IS NOT NULL
-    THEN cm360_creative_name ELSE creative END AS creative
-    FROM creative_name_joining
-),
+   SELECT 
+   'NZD' AS ad_server_creative_placement_id,
+   'cm360' AS ad_server_name,
+   SAFE_CAST(date AS STRING) AS date,
+   placement AS campaign_name,
+   placement_id AS campaign_id,
+   creative_name,
+   creative_id,
+   'CM360' AS advertiser,
+   ' ' AS advertiser_id,
+    SUM(video_25_completion) AS video_25_completion,
+    SUM(video_50_completion) AS video_50_completion,
+    SUM(video_75_completion) AS video_75_completion,
+    SUM(video_completion) AS video_completion,
+    SUM(clicks) AS clicks,
+    SUM(video_views) AS video_views,
+    SUM(impressions) AS impressions,
+    SUM(dv360_cost) AS media_cost,
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 8 THEN  SPLIT(creative_name, '_')[SAFE_OFFSET(5)] 
+         ELSE 'Other' END AS ad_format
 
-
-final AS (
-select * ,
-CASE 
-    WHEN LOWER(campaign_name) LIKE '%acast%' OR LOWER(creative) LIKE '%acast%' THEN 'Acast'
-    WHEN LOWER(campaign_name) LIKE '%3now%' OR LOWER(creative) LIKE '%3now%' OR LOWER(campaign_name) LIKE '%three%' OR LOWER(creative) LIKE '%three%' THEN 'Threenow'
-    WHEN LOWER(campaign_name) LIKE '%nzme%' OR LOWER(creative) LIKE '%nzme%' THEN 'Nzme'
-    WHEN LOWER(campaign_name) LIKE '%tvnz%' OR LOWER(creative) LIKE '%tvnz%' THEN 'Tvnz'
-    WHEN LOWER(campaign_name) LIKE '%youtube%' OR LOWER(creative) LIKE '%yt%' or lower(creative) LIKE '%youtube%' or   LOWER(campaign_name) LIKE '%yt%' THEN 'Youtube'
-    WHEN LOWER(campaign_name) LIKE '%stuff%' OR LOWER(creative) LIKE '%stuff%' THEN 'Stuff'
-    ELSE 'Ttd'
-END AS publisher,
-CASE 
-    WHEN ARRAY_LENGTH(SPLIT(ad_group,'_')) > 3 and SPLIT(ad_group,'_')[OFFSET(2)] LIKE '%DISP%' THEN 'Display'
-    WHEN lower(ad_group) LIKE '%vidod%' or lower(campaign_name) like '%vidod%'
-    or lower(creative) like '%vidod%' then 'Video OnDemand'
-else 'Other'
-END AS media_format,
-    ARRAY_REVERSE(SPLIT(ad_group, '_'))[SAFE_OFFSET(0)] AS audience_name,
-    CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN SPLIT(creative, '_')[SAFE_OFFSET(7)] 
-         ELSE 'Other' END AS creative_descr,
-    CASE WHEN ARRAY_LENGTH(SPLIT(creative, '_')) >= 8 THEN  SPLIT(creative, '_')[SAFE_OFFSET(5)] 
-         ELSE 'Other' END AS ad_format_detail,
-    CASE WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
-        ELSE SPLIT(campaign_name,'_')[SAFE_OFFSET(1)] END AS campaign_descr,
-
-from update_creative_name
-)
+   from {{ source(cm360_source_name, cm360_table_name) }}
+   WHERE placement IN (
+    SELECT DISTINCT campaign_name FROM parsed_data
+   )
+   GROUP BY 
+   date,placement,placement_id,creative_name,creative_id,ad_format
+),
+pre_process_cm360_match_data AS (
   SELECT 
         ad_server_creative_placement_id,
         ad_server_name,
@@ -161,13 +156,6 @@ from update_creative_name
         creative_id,
         advertiser,
         advertiser_id,
-        publisher,
-        media_format,
-        audience_name,
-        ad_format,
-        ad_format_detail,
-        creative_descr,
-        campaign_descr,
         SUM(player_25_complete) AS video_25_completion,
         SUM(player_50_complete) AS video_50_completion,
         SUM(player_75_complete) AS video_75_completion,
@@ -175,9 +163,80 @@ from update_creative_name
         SUM(clicks) AS clicks,
         SUM(video_views) AS video_views,
         SUM(impressions) AS impressions,
-        SUM(partner_cost_partner_currency) AS media_cost -- Aggregate Partner Cost
+        SUM(partner_cost_partner_currency) AS media_cost,
+        ad_format
+    FROM deduplicate_data
+    
+    WHERE NOT campaign_name IN (
+        SELECT DISTINCT placement FROM {{ source(cm360_source_name, cm360_table_name) }}
+    )
+    GROUP BY 
+        ad_server_creative_placement_id, ad_server_name, date, campaign_name, campaign_id, creative, creative_id, advertiser, advertiser_id,ad_format
+),
+joining AS (
+    (SELECT * FROM pre_process_cm360_match_data)
+    UNION ALL
+    (SELECT * FROM cm360_campaign_creative)
+),
+add_ad_group AS (
+  SELECT joining.*,ad_group FROM joining LEFT JOIN deduplicate_ad_group_campaign ON 
+  joining.campaign_name = deduplicate_ad_group_campaign.campaign_name
+),
+
+final AS (
+select * ,
+CASE 
+    WHEN LOWER(campaign_name) LIKE '%acast%' OR LOWER(creative_name) LIKE '%acast%' THEN 'Acast'
+    WHEN LOWER(campaign_name) LIKE '%3now%' OR LOWER(creative_name) LIKE '%3now%' OR LOWER(campaign_name) LIKE '%three%' OR LOWER(creative_name) LIKE '%three%' THEN 'Threenow'
+    WHEN LOWER(campaign_name) LIKE '%nzme%' OR LOWER(creative_name) LIKE '%nzme%' THEN 'Nzme'
+    WHEN LOWER(campaign_name) LIKE '%tvnz%' OR LOWER(creative_name) LIKE '%tvnz%' THEN 'Tvnz'
+    WHEN LOWER(campaign_name) LIKE '%youtube%' OR LOWER(creative_name) LIKE '%yt%' or lower(creative_name) LIKE '%youtube%' or   LOWER(campaign_name) LIKE '%yt%' THEN 'Youtube'
+    WHEN LOWER(campaign_name) LIKE '%stuff%' OR LOWER(creative_name) LIKE '%stuff%' THEN 'Stuff'
+    ELSE 'Ttd'
+END AS publisher,
+CASE 
+    WHEN ARRAY_LENGTH(SPLIT(ad_group,'_')) > 3 and SPLIT(ad_group,'_')[OFFSET(2)] LIKE '%DISP%' THEN 'Display'
+    WHEN lower(ad_group) LIKE '%vidod%' or lower(campaign_name) like '%vidod%'
+    or lower(creative_name) like '%vidod%' then 'Video OnDemand'
+else 'Other'
+END AS media_format,
+    ARRAY_REVERSE(SPLIT(ad_group, '_'))[SAFE_OFFSET(0)] AS audience_name,
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 8 THEN SPLIT(creative_name, '_')[SAFE_OFFSET(7)] 
+         ELSE 'Other' END AS creative_descr,
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 8 THEN  SPLIT(creative_name, '_')[SAFE_OFFSET(5)] 
+         ELSE 'Other' END AS ad_format_detail,
+    CASE WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
+        ELSE SPLIT(campaign_name,'_')[SAFE_OFFSET(1)] END AS campaign_descr,
+
+from add_ad_group
+)
+  SELECT 
+        ad_server_creative_placement_id,
+        ad_server_name,
+        date, -- Keep this as-is for joining purposes
+        campaign_name,
+        campaign_id,
+        creative_name,
+        creative_id,
+        advertiser,
+        advertiser_id,
+        publisher,
+        media_format,
+        audience_name,
+        ad_format,
+        ad_format_detail,
+        creative_descr,
+        campaign_descr,
+        SUM(video_25_completion) AS video_25_completion,
+        SUM(video_50_completion) AS video_50_completion,
+        SUM(video_75_completion) AS video_75_completion,
+        SUM(video_completion) AS video_completion,
+        SUM(clicks) AS clicks,
+        SUM(video_views) AS video_views,
+        SUM(impressions) AS impressions,
+        SUM(media_cost) AS media_cost -- Aggregate Partner Cost
     FROM final
     GROUP BY 
-        ad_server_creative_placement_id, ad_server_name, date, campaign_name, campaign_id, creative, creative_id, advertiser, advertiser_id,publisher,media_format,
+        ad_server_creative_placement_id, ad_server_name, date, campaign_name, campaign_id, creative_name, creative_id, advertiser, advertiser_id,publisher,media_format,
         audience_name,ad_format,ad_format_detail,creative_descr,campaign_descr
 {% endmacro %}
