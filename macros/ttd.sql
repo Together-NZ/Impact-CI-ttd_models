@@ -135,7 +135,7 @@ cm360_campaign_creative AS (
     SUM(video_views) AS video_views,
     SUM(impressions) AS impressions,
     SUM(dv360_cost) AS media_cost,
-    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 8 THEN  SPLIT(creative_name, '_')[SAFE_OFFSET(5)] 
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 7 THEN  SPLIT(creative_name, '_')[SAFE_OFFSET(5)] 
          ELSE 'Other' END AS ad_format
 
    from {{ source(cm360_source_name, cm360_table_name) }}
@@ -203,7 +203,7 @@ END AS media_format,
     ARRAY_REVERSE(SPLIT(ad_group, '_'))[SAFE_OFFSET(0)] AS audience_name,
     CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 8 THEN SPLIT(creative_name, '_')[SAFE_OFFSET(7)] 
          ELSE 'Other' END AS creative_descr,
-    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 8 THEN  SPLIT(creative_name, '_')[SAFE_OFFSET(5)] 
+    CASE WHEN ARRAY_LENGTH(SPLIT(creative_name, '_')) >= 7 THEN  SPLIT(creative_name, '_')[SAFE_OFFSET(5)] 
          ELSE 'Other' END AS ad_format_detail,
     CASE WHEN ARRAY_LENGTH(SPLIT(campaign_name,'_')) <=1 THEN 'Other'
         ELSE SPLIT(campaign_name,'_')[SAFE_OFFSET(1)] END AS campaign_descr,
