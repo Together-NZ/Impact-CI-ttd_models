@@ -187,7 +187,9 @@ final AS (
 select * ,
 CASE 
     WHEN LOWER(campaign_name) LIKE '%acast%' OR LOWER(creative_name) LIKE '%acast%' THEN 'Acast'
-    WHEN LOWER(campaign_name) LIKE '%3now%' OR LOWER(creative_name) LIKE '%3now%' OR LOWER(campaign_name) LIKE '%three%' OR LOWER(creative_name) LIKE '%three%' THEN 'Threenow'
+    WHEN LOWER(campaign_name) LIKE '%3now%' OR LOWER(creative_name) LIKE '%3now%' OR LOWER(campaign_name) LIKE '%three%' OR LOWER(creative_name) LIKE '%three%' OR (
+        LOWER(campaign_name) LIKE '%3 now%' OR LOWER(creative_name) LIKE '%3 now%')
+        THEN 'Threenow'
     WHEN LOWER(campaign_name) LIKE '%nzme%' OR LOWER(creative_name) LIKE '%nzme%' THEN 'Nzme'
     WHEN LOWER(campaign_name) LIKE '%tvnz%' OR LOWER(creative_name) LIKE '%tvnz%' THEN 'Tvnz'
     WHEN LOWER(campaign_name) LIKE '%youtube%' OR LOWER(creative_name) LIKE '%yt%' or lower(creative_name) LIKE '%youtube%' or   LOWER(campaign_name) LIKE '%yt%' THEN 'Youtube'
