@@ -196,7 +196,6 @@ CASE
     WHEN LOWER(campaign_name) LIKE '%stuff%' OR LOWER(creative_name) LIKE '%stuff%' THEN 'Stuff'
     ELSE 'Ttd'
 END AS publisher,
-'TTD' AS platform,
 CASE 
     WHEN ARRAY_LENGTH(SPLIT(ad_group,'_')) > 3 and SPLIT(ad_group,'_')[OFFSET(2)] LIKE '%DISP%' THEN 'Display'
     WHEN lower(ad_group) LIKE '%vidod%' or lower(campaign_name) like '%vidod%'
