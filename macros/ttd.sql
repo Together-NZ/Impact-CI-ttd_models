@@ -109,7 +109,7 @@ non_audience_deduplicate_data AS (
     SELECT * FROM ranked_data WHERE row_num = 1
 ),
 deduplicate_data AS (
-    SELECT * except(audience_name),ARRAY_REVERSE(SPLIT(ad_group, '_'))[SAFE_OFFSET(0)] AS audience_name
+    SELECT * except(ad_group),ARRAY_REVERSE(SPLIT(ad_group, '_'))[SAFE_OFFSET(0)] AS audience_name
     FROM non_audience_deduplicate_data
 ),
 cm360_campaign_creative AS (
