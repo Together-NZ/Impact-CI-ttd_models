@@ -98,7 +98,7 @@ ranked_data AS (
         ROW_NUMBER() OVER (
             PARTITION BY
                 Date, partner_id, advertiser_id, campaign_id, ad_group_id, ad_format, creative_id, 
-                advertiser,  deal_id, ad_server_creative_placement_id
+                  deal_id, ad_server_creative_placement_id
             order by
                 _sdc_extracted_at desc
         ) AS row_num
