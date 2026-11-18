@@ -34,7 +34,7 @@ WITH parsed_data AS (
         CAST(REPLACE(JSON_VALUE(JSON_EXTRACT(data, "$['Player 25% Complete']")), ',', '.') AS FLOAT64) AS player_25_complete,
         CAST(REPLACE(JSON_VALUE(JSON_EXTRACT(data, "$['Player 50% Complete']")), ',', '.') AS FLOAT64) AS player_50_complete,
         CAST(REPLACE(JSON_VALUE(JSON_EXTRACT(data, "$['Player 75% Complete']")), ',', '.') AS FLOAT64) AS player_75_complete,
-        CAST(REPLACE(JSON_VALUE(JSON_EXTRACT(data, "$['Player 100% Complete']")), ',', '.') AS FLOAT64) AS player_100_complete,
+        CAST(REPLACE(JSON_VALUE(JSON_EXTRACT(data, "$['Player Completed Views']")), ',', '.') AS FLOAT64) AS player_100_complete,
 
         -- Example:
         CAST(JSON_VALUE(JSON_EXTRACT(data, "$.Player Views")) AS INT64) AS video_views,
@@ -184,6 +184,7 @@ CASE
     WHEN LOWER(campaign_name) LIKE '%3now%' OR LOWER(creative_name) LIKE '%3now%' OR LOWER(campaign_name) LIKE '%three%' OR LOWER(creative_name) LIKE '%three%' OR (
         LOWER(campaign_name) LIKE '%3 now%' OR LOWER(creative_name) LIKE '%3 now%')
         THEN 'Threenow'
+    WHEN LOWER(campaign_name) LIKE '%sky%' OR LOWER(creative_name) LIKE '%sky%' THEN 'Sky'
     WHEN LOWER(campaign_name) LIKE '%nzme%' OR LOWER(creative_name) LIKE '%nzme%' THEN 'Nzme'
     WHEN LOWER(campaign_name) LIKE '%tvnz%' OR LOWER(creative_name) LIKE '%tvnz%' THEN 'Tvnz'
     WHEN LOWER(campaign_name) LIKE '%youtube%' OR LOWER(creative_name) LIKE '%yt%' or lower(creative_name) LIKE '%youtube%' or   LOWER(campaign_name) LIKE '%yt%' THEN 'Youtube'
